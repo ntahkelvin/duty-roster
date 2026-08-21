@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Duty Roster">
+<title>Duty Roster</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --font-display: -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --font-body: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+  :root{
+    --bg:#0d1117; --panel:#161c26; --panel-2:#1d2532; --hairline:#2a3342;
+    --ink:#eef1f6; --ink-dim:#8b95a7; --ink-faint:#57617a;
+    --work:#39c07d; --work-dim:#1f6e46; --work-glow:rgba(57,192,125,0.16);
+    --rest:#f5a623; --rest-dim:#a8791f; --rest-glow:rgba(245,166,35,0.14);
+    --extra:#e64d4d; --extra-dim:#8f2f2f; --extra-glow:rgba(230,77,77,0.18);
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); min-height:100%;}
+  body{padding:18px 14px 56px; max-width:560px; margin:0 auto;}
+
+  .brand{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
+  .brand h1{font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:0.08em; text-transform:uppercase; margin:0;}
+  .brand .dot{color:var(--work);}
+  .brand .clock{font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);}
+
+  .tabs{display:flex; gap:6px; margin-bottom:14px; background:var(--panel); border:1px solid var(--hairline); border-radius:12px; padding:4px;}
+  .tabs button{flex:1; padding:9px 0; border:none; background:transparent; color:var(--ink-dim);
+    font-family:var(--font-display); font-weight:600; font-size:11.5px; letter-spacing:0.03em; text-transform:uppercase; border-radius:9px; cursor:pointer;}
+  .tabs button.active{background:var(--panel-2); color:var(--work);}
+
+  .card{background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:16px; margin-bottom:14px;}
+
+  /* hero */
+  .hero{background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--hairline); border-radius:var(--radius); padding:16px 16px 14px; margin-bottom:14px; position:relative; overflow:hidden;}
+  .hero-label{font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:6px;}
+  .hero-main{display:flex; align-items:flex-end; justify-content:space-between; gap:10px;}
+  .hero-time{font-family:var(--font-mono); font-weight:700; font-size:30px; line-height:1; color:var(--work);}
+  .hero-time.rest{color:var(--rest);} .hero-time.unset{color:var(--ink-dim); font-size:18px;}
+  .hero-sub{font-size:12px; color:var(--ink-dim); margin-top:5px;}
+  .hero-day{text-align:right; font-family:var(--font-display); font-weight:600; font-size:13px;}
+  .hero-date{font-size:11px; color:var(--ink-dim); margin-top:2px;}
+
+  /* insight strip */
+  .insights{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;}
+  .ins-box{background:var(--panel); border:1px solid var(--hairline); border-radius:12px; padding:10px 8px; text-align:center;}
+  .ins-box .v{font-family:var(--font-mono); font-weight:700; font-size:16px; color:var(--ink);}
+  .ins-box .l{font-size:9px; color:var(--ink-dim); margin-top:3px; letter-spacing:0.03em; line-height:1.3;}
+
+  /* calendar */
+  .monthnav{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .monthnav button{background:var(--panel-2); border:1px solid var(--hairline); color:var(--ink); width:34px; height:34px; border-radius:10px; font-size:16px; cursor:pointer;}
+  .monthnav .label{font-family:var(--font-display); font-weight:600; font-size:14px; letter-spacing:0.02em;}
+  .cal-dow{display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:10px; color:var(--ink-faint); letter-spacing:0.06em; margin-bottom:6px;}
+  .week-row{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:3px;}
+  .week-sub{text-align:right; font-size:10px; color:var(--ink-faint); font-family:var(--font-mono); margin-bottom:8px; padding-right:2px;}
+  .cal-cell{aspect-ratio:1/1; border-radius:9px; border:1px solid var(--hairline); background:var(--panel-2);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; cursor:pointer; position:relative;}
+  .cal-cell.pad{visibility:hidden; cursor:default;}
+  .cal-cell.today{box-shadow:0 0 0 2px var(--ink) inset;}
+  .cal-cell.selected{transform:scale(0.94);}
+  .cal-cell .n{font-family:var(--font-mono); font-size:10px; opacity:0.85;}
+  .cal-cell .tag{font-family:var(--font-display); font-weight:700; font-size:12px; letter-spacing:0.02em;}
+  .cal-cell.work{background:var(--work-glow); border-color:var(--work-dim); color:var(--work);}
+  .cal-cell.rest{background:var(--rest-glow); border-color:var(--rest-dim); color:var(--rest);}
+  .cal-cell.extra{background:var(--extra-glow); border-color:var(--extra-dim); color:var(--extra);}
+  .cal-cell.unset{color:var(--ink-faint);}
+  .cal-cell .moon{position:absolute; top:3px; right:4px; font-size:8px; opacity:0.8;}
+  .legend{display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; font-size:10px; color:var(--ink-dim);}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .legend i{width:14px; height:14px; border-radius:5px; display:inline-block;}
+
+  /* day detail */
+  .dd-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;}
+  .dd-head h2{font-family:var(--font-display); font-size:16px; margin:0;}
+  .dd-line{font-size:11px; color:var(--ink-dim);}
+  .dd-sched{font-family:var(--font-mono); font-size:14px; margin:8px 0 12px; color:var(--work);}
+  .dd-sched.rest{color:var(--rest);} .dd-sched.unset{color:var(--ink-dim); font-family:var(--font-body); font-size:13px;}
+
+  .entry{background:var(--panel-2); border:1px solid var(--hairline); border-radius:11px; padding:11px 12px; margin-bottom:8px;}
+  .entry-top{display:flex; justify-content:space-between; align-items:center;}
+  .entry-tag{font-size:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--font-display); font-weight:700; padding:2px 8px; border-radius:20px;}
+  .entry-tag.scheduled{color:var(--work); background:var(--work-glow);}
+  .entry-tag.extra{color:var(--extra); background:var(--extra-glow);}
+  .entry-del{background:none; border:none; color:var(--ink-faint); font-size:16px; cursor:pointer; padding:0 2px;}
+  .entry-time{font-family:var(--font-mono); font-size:15px; margin-top:6px;}
+  .entry-meta{font-size:11px; color:var(--ink-dim); margin-top:3px; display:flex; gap:10px; flex-wrap:wrap;}
+  .entry-pay{color:var(--work);}
+  .entry-notes{font-size:11px; color:var(--ink-dim); margin-top:4px; font-style:italic;}
+  .day-note{width:100%; background:var(--bg); border:1px solid var(--hairline); border-radius:9px; color:var(--ink);
+    font-family:var(--font-body); font-size:12px; padding:8px 10px; margin-top:10px; resize:none;}
+
+  .add-btn{width:100%; padding:11px 0; border:1px dashed var(--hairline); background:transparent; color:var(--ink-dim);
+    border-radius:11px; font-family:var(--font-display); font-weight:600; font-size:12px; letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; margin-top:2px;}
+  .add-btn:active{background:var(--panel-2);}
+
+  .form{margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline);}
+  .form label{font-size:11px; color:var(--ink-dim); display:block; margin:10px 0 4px;}
+  .form input, .form select{width:100%; background:var(--bg); border:1px solid var(--hairline); border-radius:9px; color:var(--ink);
+    font-family:var(--font-mono); font-size:14px; padding:9px 10px;}
+  .row2{display:flex; gap:10px;}
+  .row2 > div{flex:1;}
+  .segmented{display:flex; gap:6px;}
+  .segmented button{flex:1; padding:8px 0; border-radius:9px; border:1px solid var(--hairline); background:var(--panel-2);
+    color:var(--ink-dim); font-size:11px; font-family:var(--font-display); font-weight:600; text-transform:uppercase; cursor:pointer;}
+  .segmented button.on{background:var(--work-glow); color:var(--work); border-color:var(--work-dim);}
+  .segmented button.on.kindextra{background:var(--extra-glow); color:var(--extra); border-color:var(--extra-dim);}
+  .presets{display:flex; gap:6px; margin-top:6px;}
+  .presets button{flex:1; padding:6px 0; border-radius:8px; border:1px solid var(--hairline); background:var(--bg);
+    color:var(--ink-dim); font-size:10px; font-family:var(--font-display); font-weight:600; cursor:pointer;}
+  .save-btn{margin-top:14px; width:100%; padding:11px 0; border:none; border-radius:9px; background:var(--work); color:#062114;
+    font-weight:700; font-size:13px; letter-spacing:0.05em; text-transform:uppercase; font-family:var(--font-display); cursor:pointer;}
+  .cancel-link{display:block; text-align:center; margin-top:8px; font-size:11px; color:var(--ink-faint); background:none; border:none; cursor:pointer;}
+
+  /* summary */
+  .sum-title{font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:10px;}
+  .sum-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .sum-box{background:var(--panel-2); border:1px solid var(--hairline); border-radius:11px; padding:12px;}
+  .sum-box .v{font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--ink);}
+  .sum-box .v.work{color:var(--work);} .sum-box .v.extra{color:var(--extra);}
+  .sum-box .l{font-size:10px; color:var(--ink-dim); margin-top:3px; letter-spacing:0.03em;}
+
+  .copy-btn{width:100%; margin-top:12px; padding:10px 0; border-radius:10px; border:1px solid var(--hairline); background:var(--panel-2);
+    color:var(--ink); font-family:var(--font-display); font-weight:600; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; cursor:pointer;}
+
+  .settings-toggle{font-size:11px; color:var(--ink-dim); text-align:right; margin:-4px 0 10px; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  .settings-panel{display:none;}
+  .settings-panel.open{display:block;}
+  .set-field{margin-bottom:10px;}
+  .set-field label{font-size:11px; color:var(--ink-dim); display:block; margin-bottom:4px;}
+  .set-field input{width:100%; background:var(--bg); border:1px solid var(--hairline); border-radius:9px; color:var(--ink);
+    font-family:var(--font-mono); font-size:14px; padding:9px 10px;}
+
+  .verify-note{font-size:11.5px; color:var(--ink-dim); background:var(--panel); border:1px dashed var(--hairline); border-radius:10px; padding:10px 12px; margin:14px 0; line-height:1.5;}
+  .verify-note b{color:var(--work);}
+  .footer-note{text-align:center; font-size:11px; color:var(--ink-dim); margin-top:16px;}
+</style>
+</head>
+<body>
+
+  <div class="brand">
+    <h1>Duty<span class="dot">·</span>Roster</h1>
+    <div class="clock" id="clock"></div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-label">Next up</div>
+    <div class="hero-main">
+      <div><div class="hero-time" id="heroTime">—</div><div class="hero-sub" id="heroSub">Loading…</div></div>
+      <div><div class="hero-day" id="heroDay">—</div><div class="hero-date" id="heroDate">—</div></div>
+    </div>
+  </div>
+
+  <div class="insights">
+    <div class="ins-box"><div class="v" id="insRest">—</div><div class="l">Days to next rest</div></div>
+    <div class="ins-box"><div class="v" id="insStreak">—</div><div class="l">Current work streak</div></div>
+    <div class="ins-box"><div class="v" id="insMonthHrs">—</div><div class="l">Hours logged, this month</div></div>
+  </div>
+
+  <div class="tabs">
+    <button id="tabCal" class="active">Calendar</button>
+    <button id="tabSum">Hours &amp; Pay</button>
+  </div>
+
+  <div id="viewCal">
+    <div class="card">
+      <div class="monthnav">
+        <button id="prevMonth">‹</button>
+        <div class="label" id="monthLabel">—</div>
+        <button id="nextMonth">›</button>
+      </div>
+      <div class="cal-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+      <div id="calBody"></div>
+      <div class="legend">
+        <span><i style="background:var(--work)"></i>W · Work</span>
+        <span><i style="background:var(--rest)"></i>R · Rest</span>
+        <span><i style="background:var(--extra)"></i>Ex · Extra shift</span>
+        <span>🌙 Night shift</span>
+      </div>
+    </div>
+
+    <div class="card" id="dayCard" style="display:none">
+      <div class="dd-head">
+        <h2 id="ddTitle">—</h2>
+        <div class="dd-line" id="ddLine">—</div>
+      </div>
+      <div class="dd-sched" id="ddSched">—</div>
+
+      <button class="add-btn" id="editRotaBtn" style="border-color:var(--rest-dim); color:var(--rest);">✎ Fix rota for this day</button>
+      <div class="form" id="rotaEditForm" style="display:none">
+        <div class="scope" id="rotaScope">—</div>
+        <div class="segmented" id="rotaKindSeg">
+          <button data-rk="work" class="on">Work</button>
+          <button data-rk="rest">Rest</button>
+        </div>
+        <div class="row2" id="rotaTimeFields" style="margin-top:10px;">
+          <div><label>Start</label><input type="time" id="rStart" value="07:45"></div>
+          <div><label>End</label><input type="time" id="rEnd" value="18:00"></div>
+        </div>
+        <button class="save-btn" id="saveRotaBtn">Save rota change</button>
+        <button class="cancel-link" id="cancelRotaBtn">Cancel</button>
+      </div>
+
+      <div id="entryList"></div>
+      <button class="add-btn" id="addEntryBtn">+ Log hours for this day</button>
+
+      <div class="form" id="entryForm" style="display:none">
+        <label>Type</label>
+        <div class="segmented" id="kindSeg">
+          <button data-kind="scheduled" class="on">Worked as scheduled</button>
+          <button data-kind="extra" class="kindextra">Extra / overtime shift</button>
+        </div>
+
+        <div class="row2" style="margin-top:12px;">
+          <div><label>Start</label><input type="time" id="fStart" value="07:45"></div>
+          <div><label>End</label><input type="time" id="fEnd" value="18:00"></div>
+        </div>
+
+        <label>Pay</label>
+        <div class="segmented" id="paySeg">
+          <button data-pay="hourly" class="on">Hourly rate</button>
+          <button data-pay="flat">Flat amount</button>
+          <button data-pay="none">Unpaid / n·a</button>
+        </div>
+
+        <div id="hourlyFields">
+          <div class="row2" style="margin-top:8px;">
+            <div><label>Rate (£/hr)</label><input type="number" step="0.01" id="fRate" value="12.50"></div>
+            <div><label>Est. hours</label><input type="text" id="fHoursPreview" readonly></div>
+          </div>
+          <div class="presets" id="ratePresets">
+            <button data-preset="weekday">Weekday £<span id="pWeekday">12.50</span></button>
+            <button data-preset="weekend">Weekend £<span id="pWeekend">17.50</span></button>
+            <button data-preset="night">Night £<span id="pNight">20.00</span></button>
+          </div>
+        </div>
+        <div id="flatFields" style="display:none">
+          <label>Flat amount (£)</label><input type="number" step="0.01" id="fFlat" value="0">
+        </div>
+
+        <label>Notes (optional)</label>
+        <input type="text" id="fNotes" placeholder="e.g. covered for J. Smith">
+
+        <button class="save-btn" id="saveEntryBtn">Save entry</button>
+        <button class="cancel-link" id="cancelEntryBtn">Cancel</button>
+      </div>
+
+      <label style="font-size:11px; color:var(--ink-dim); display:block; margin-top:14px;">Day note</label>
+      <textarea class="day-note" id="dayNote" rows="2" placeholder="Anything worth remembering about this day…"></textarea>
+    </div>
+  </div>
+
+  <div id="viewSum" style="display:none">
+    <div class="card">
+      <div class="monthnav">
+        <button id="prevMonth2">‹</button>
+        <div class="label" id="monthLabel2">—</div>
+        <button id="nextMonth2">›</button>
+      </div>
+      <div class="sum-title">This month</div>
+      <div class="sum-grid">
+        <div class="sum-box"><div class="v work" id="sumSchedHours">0h</div><div class="l">Scheduled hours (rota)</div></div>
+        <div class="sum-box"><div class="v" id="sumLoggedHours">0h</div><div class="l">Hours actually logged</div></div>
+        <div class="sum-box"><div class="v extra" id="sumExtraHours">0h</div><div class="l">Extra / overtime hours</div></div>
+        <div class="sum-box"><div class="v work" id="sumPay">£0.00</div><div class="l">Total pay logged</div></div>
+      </div>
+      <button class="copy-btn" id="copySummaryBtn">Copy month summary</button>
+    </div>
+
+    <div class="card">
+      <div class="sum-title">Extra shifts this month</div>
+      <div id="extraList"></div>
+      <div id="extraEmpty" style="font-size:12px; color:var(--ink-dim);">None logged yet this month.</div>
+    </div>
+
+    <div class="settings-toggle" id="settingsToggle">Default pay rates ▾</div>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="card">
+        <div class="row2">
+          <div class="set-field"><label>Standard rate (£/hr)</label><input type="number" step="0.01" id="setStdRate"></div>
+          <div class="set-field"><label>Weekday extra (£/hr)</label><input type="number" step="0.01" id="setWeekdayRate"></div>
+        </div>
+        <div class="row2">
+          <div class="set-field"><label>Weekend extra (£/hr)</label><input type="number" step="0.01" id="setWeekendRate"></div>
+          <div class="set-field"><label>Night extra (£/hr)</label><input type="number" step="0.01" id="setNightRate"></div>
+        </div>
+        <button class="save-btn" id="saveSettingsBtn">Save rates</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="verify-note">
+    <b>Line 23 = week starting Sun 16 Aug</b>, stepping forward one line every week (23→24…42→1→2…). If any day still shows the wrong Work/Rest status or wrong times, open that day and tap <b>"✎ Fix rota for this day"</b> — it corrects that line permanently, so it's right every time that line comes round again, no re-typing needed. Everything you log or fix saves on this device only.
+  </div>
+  <div class="footer-note">Tap a day · edit a line · log a shift</div>
+
+<script>
+const PATTERN_KEY = 'roster-patterns-v2';
+const ENTRIES_KEY = 'roster-entries-v1';
+const NOTES_KEY = 'roster-notes-v1';
+const SETTINGS_KEY = 'roster-settings-v2';
+const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const CYCLE_START = new Date('2026-08-16T00:00:00');
+const CYCLE_START_LINE = 23;
+const CYCLE_LEN = 42;
+
+const RAW_LINES = {
+  1:"R 19:00-06:30 19:00-06:30 19:00-06:30 19:00-06:30 19:00-06:15 19:00-06:15",
+  2:"19:00-06:30 R R R R R R",
+  3:"R 06:45-17:45 06:45-18:45 06:45-18:45 06:45-12:45 R R",
+  4:"R R 06:45-18:45 06:45-19:15 06:45-18:45 06:45-18:45 R",
+  5:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-18:00",
+  6:"07:45-18:00 R R 06:45-18:45 06:45-18:45 06:45-18:45 R",
+  7:"R 06:45-19:15 12:45-19:15 06:45-18:45 R R 06:00-18:00",
+  8:"06:00-18:00 R R R 06:45-18:45 06:45-18:45 R",
+  9:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-18:00",
+  10:"06:00-18:00 R R R 06:45-19:15 06:45-18:45 R",
+  11:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-18:00",
+  12:"07:45-18:00 06:45-18:45 R R 06:45-19:15 06:45-19:15 R",
+  13:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-18:00",
+  14:"07:45-18:00 R R R 06:15-18:45 06:15-18:45 R",
+  15:"R 06:15-18:45 06:15-18:45 06:15-18:45 R R 07:45-18:00",
+  16:"07:45-19:15 R R 06:45-18:45 06:15-18:45 06:15-12:45 R",
+  17:"R 06:45-18:45 06:45-18:45 R R R 07:45-18:00",
+  18:"07:45-18:00 R R 06:45-18:45 06:45-18:45 06:45-18:45 R",
+  19:"R 19:00-06:30 19:00-06:30 19:00-06:30 19:00-06:30 19:00-06:15 19:00-06:15",
+  20:"19:00-06:30 R R R R R R",
+  21:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-19:15",
+  22:"07:45-18:00 R R 06:45-19:15 12:45-19:15 06:45-18:45 R",
+  23:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-18:00",
+  24:"07:45-18:00 R R R 06:45-18:45 06:45-19:15 R",
+  25:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-19:15",
+  26:"07:45-19:15 12:45-19:15 R R 06:45-18:45 06:45-18:45 R",
+  27:"R 06:45-18:45 06:45-18:45 R R 12:45-19:15 07:45-19:15",
+  28:"07:45-18:00 R R 12:45-19:15 06:45-18:45 06:45-17:45 R",
+  29:"07:45-18:00 R R R 06:45-18:45 06:45-18:45 R",
+  30:"R R 06:45-19:15 06:45-18:45 R 06:45-18:45 07:45-18:00",
+  31:"07:45-18:00 06:45-18:45 R R 06:45-18:45 06:45-18:45 R",
+  32:"R 06:45-18:45 06:45-18:45 06:45-18:45 R R 07:45-18:00",
+  33:"07:45-18:00 06:45-18:45 06:45-18:45 R R R R",
+  34:"R 06:45-18:45 R R 06:45-18:45 06:45-18:45 07:45-18:00",
+  35:"06:00-18:00 R R R 06:45-18:45 06:45-18:45 R",
+  36:"07:45-18:00 R 06:45-17:45 R 06:45-17:45 06:45-18:45 R",
+  37:"R R 06:15-18:45 06:45-17:45 R 06:45-18:45 06:00-18:00",
+  38:"07:45-19:15 06:15-12:45 R R 06:45-18:45 06:45-18:45 R",
+  39:"R 06:15-18:45 06:45-19:15 06:45-17:45 06:45-18:45 R R",
+  40:"R R 12:45-18:45 06:15-18:45 06:15-18:45 06:15-18:45 R"
+};
+
+function parseToken(tok){ if(tok==='R') return {type:'rest'}; const [s,e]=tok.split('-'); return {type:'shift', start:s, end:e}; }
+function buildSeedPatterns(){
+  const p = {};
+  for(let i=1;i<=CYCLE_LEN;i++) p[i] = RAW_LINES[i] ? RAW_LINES[i].split(' ').map(parseToken) : [null,null,null,null,null,null,null];
+  return p;
+}
+
+// Offline storage shim — mirrors the window.storage API but uses the
+// browser's own localStorage, so everything works with zero network calls.
+const storage = {
+  async get(key){
+    try{ const v = localStorage.getItem(key); return v!==null ? {key, value:v} : null; }
+    catch(e){ return null; }
+  },
+  async set(key, value){
+    try{ localStorage.setItem(key, value); return {key, value}; }
+    catch(e){ return null; }
+  }
+};
+
+let patterns = {}, entries = {}, dayNotes = {};
+let settings = {stdRate:12.50, weekdayRate:12.50, weekendRate:17.50, nightRate:20.00};
+let calMonth, selectedDate = null;
+
+function fmtKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function startOfWeek(d){ const r=new Date(d); r.setDate(r.getDate()-r.getDay()); r.setHours(0,0,0,0); return r; }
+function toMinutes(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function durHours(start,end){ let mins=toMinutes(end)-toMinutes(start); if(mins<0) mins+=24*60; return mins/60; }
+function durLabel(hrs){ const h=Math.floor(hrs), m=Math.round((hrs-h)*60); return h+'h'+(m?' '+m+'m':''); }
+function isNight(entry){ if(!entry || entry.type!=='shift') return false; return toMinutes(entry.end) < toMinutes(entry.start); }
+function isWeekend(d){ return d.getDay()===0 || d.getDay()===6; }
+function lineForWeek(ws){
+  const days = Math.round((ws-CYCLE_START)/86400000);
+  const wd = Math.floor(days/7);
+  let idx = ((CYCLE_START_LINE-1+wd)%CYCLE_LEN+CYCLE_LEN)%CYCLE_LEN;
+  return idx+1;
+}
+function scheduledEntryFor(d){
+  const line = lineForWeek(startOfWeek(d));
+  const pattern = patterns[line] || [null,null,null,null,null,null,null];
+  return {line, entry: pattern[d.getDay()]};
+}
+function dayStatus(d, key){
+  const {entry} = scheduledEntryFor(d);
+  const dayEntries = entries[key] || [];
+  const hasExtra = dayEntries.some(en=>en.kind==='extra');
+  if(hasExtra) return 'extra';
+  if(entry && entry.type==='shift') return 'work';
+  if(entry && entry.type==='rest') return 'rest';
+  return 'unset';
+}
+
+async function loadAll(){
+  const seed = buildSeedPatterns();
+  try{ const r = await storage.get(PATTERN_KEY); patterns = r&&r.value ? JSON.parse(r.value) : seed; }catch(e){ patterns = seed; }
+  try{ const r = await storage.get(ENTRIES_KEY); entries = r&&r.value ? JSON.parse(r.value) : {}; }catch(e){ entries = {}; }
+  try{ const r = await storage.get(NOTES_KEY); dayNotes = r&&r.value ? JSON.parse(r.value) : {}; }catch(e){ dayNotes = {}; }
+  try{ const r = await storage.get(SETTINGS_KEY); settings = r&&r.value ? JSON.parse(r.value) : settings; }catch(e){}
+}
+async function savePatterns(){ try{ await storage.set(PATTERN_KEY, JSON.stringify(patterns));}catch(e){} }
+async function saveEntries(){ try{ await storage.set(ENTRIES_KEY, JSON.stringify(entries));}catch(e){} }
+async function saveNotes(){ try{ await storage.set(NOTES_KEY, JSON.stringify(dayNotes));}catch(e){} }
+async function saveSettings(){ try{ await storage.set(SETTINGS_KEY, JSON.stringify(settings));}catch(e){} }
+
+/* ---------- CALENDAR ---------- */
+function renderCalendar(){
+  document.getElementById('monthLabel').textContent = MONTHS[calMonth.getMonth()]+' '+calMonth.getFullYear();
+  document.getElementById('monthLabel2').textContent = MONTHS[calMonth.getMonth()]+' '+calMonth.getFullYear();
+  const body = document.getElementById('calBody');
+  body.innerHTML = '';
+  const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
+  const daysInMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0).getDate();
+  const todayKey = fmtKey(new Date());
+
+  const cells = [];
+  for(let i=0;i<first.getDay();i++) cells.push(null);
+  for(let day=1; day<=daysInMonth; day++) cells.push(new Date(calMonth.getFullYear(), calMonth.getMonth(), day));
+  while(cells.length % 7 !== 0) cells.push(null);
+
+  for(let w=0; w<cells.length/7; w++){
+    const weekCells = cells.slice(w*7, w*7+7);
+    const row = document.createElement('div');
+    row.className = 'week-row';
+    let weekHours = 0;
+    weekCells.forEach(d=>{
+      if(!d){ const pad=document.createElement('div'); pad.className='cal-cell pad'; row.appendChild(pad); return; }
+      const key = fmtKey(d);
+      const {entry} = scheduledEntryFor(d);
+      if(entry && entry.type==='shift') weekHours += durHours(entry.start, entry.end);
+      const status = dayStatus(d, key);
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell '+status+(key===todayKey?' today':'')+(key===selectedDate?' selected':'');
+      const tagMap = {work:'W', rest:'R', extra:'Ex', unset:'–'};
+      cell.innerHTML = '<span class="n">'+d.getDate()+'</span><span class="tag">'+tagMap[status]+'</span>'+
+        (isNight(entry) && status!=='extra' ? '<span class="moon">🌙</span>' : '');
+      cell.addEventListener('click', ()=>{ selectedDate = key; renderCalendar(); renderDayCard(); });
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+    const sub = document.createElement('div');
+    sub.className = 'week-sub';
+    sub.textContent = weekHours>0 ? weekHours.toFixed(1)+'h scheduled this week' : '';
+    body.appendChild(sub);
+  }
+}
+
+function renderDayCard(){
+  const card = document.getElementById('dayCard');
+  if(!selectedDate){ card.style.display='none'; return; }
+  card.style.display='block';
+  const d = new Date(selectedDate+'T00:00:00');
+  const {line, entry} = scheduledEntryFor(d);
+  document.getElementById('ddTitle').textContent = DOW_FULL[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()];
+  document.getElementById('ddLine').textContent = 'Line '+line;
+  const schedEl = document.getElementById('ddSched');
+  if(!entry){ schedEl.textContent='Rota: not set for this line'; schedEl.className='dd-sched unset'; }
+  else if(entry.type==='rest'){ schedEl.textContent='Rota: Rest day'; schedEl.className='dd-sched rest'; }
+  else { schedEl.textContent='Rota: '+entry.start+'–'+entry.end+(isNight(entry)?' 🌙':''); schedEl.className='dd-sched'; }
+
+  const list = document.getElementById('entryList');
+  const dayEntries = entries[selectedDate] || [];
+  list.innerHTML = '';
+  dayEntries.forEach((en, idx)=>{
+    const hrs = durHours(en.start, en.end);
+    let pay = 0;
+    if(en.payType==='hourly') pay = hrs*en.rate;
+    else if(en.payType==='flat') pay = en.flat;
+    const div = document.createElement('div');
+    div.className='entry';
+    div.innerHTML =
+      '<div class="entry-top"><span class="entry-tag '+en.kind+'">'+(en.kind==='extra'?'Extra shift':'Worked')+'</span>'+
+      '<button class="entry-del" data-idx="'+idx+'">✕</button></div>'+
+      '<div class="entry-time">'+en.start+'–'+en.end+'</div>'+
+      '<div class="entry-meta"><span>'+durLabel(hrs)+'</span>'+
+        (en.payType!=='none' ? '<span class="entry-pay">£'+pay.toFixed(2)+(en.payType==='hourly'?' ('+'£'+en.rate.toFixed(2)+'/hr)':' (flat)')+'</span>' : '<span>Unpaid</span>')+
+      '</div>'+
+      (en.notes ? '<div class="entry-notes">'+en.notes+'</div>' : '');
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.entry-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const idx = parseInt(btn.getAttribute('data-idx'),10);
+      entries[selectedDate].splice(idx,1);
+      if(entries[selectedDate].length===0) delete entries[selectedDate];
+      await saveEntries();
+      renderCalendar(); renderDayCard(); renderInsights();
+    });
+  });
+
+  document.getElementById('entryForm').style.display='none';
+  if(entry && entry.type==='shift'){
+    document.getElementById('fStart').value = entry.start;
+    document.getElementById('fEnd').value = entry.end;
+  }
+  document.getElementById('pWeekday').textContent = settings.weekdayRate.toFixed(2);
+  document.getElementById('pWeekend').textContent = settings.weekendRate.toFixed(2);
+  document.getElementById('pNight').textContent = settings.nightRate.toFixed(2);
+  updateHoursPreview();
+
+  document.getElementById('dayNote').value = dayNotes[selectedDate] || '';
+}
+
+document.getElementById('addEntryBtn').addEventListener('click', ()=>{ document.getElementById('entryForm').style.display='block'; document.getElementById('rotaEditForm').style.display='none'; });
+document.getElementById('cancelEntryBtn').addEventListener('click', ()=>{ document.getElementById('entryForm').style.display='none'; });
+
+/* ---------- ROTA CORRECTION ---------- */
+document.getElementById('editRotaBtn').addEventListener('click', ()=>{
+  if(!selectedDate) return;
+  const d = new Date(selectedDate+'T00:00:00');
+  const {line, entry} = scheduledEntryFor(d);
+  document.getElementById('rotaScope').textContent = 'Editing Line '+line+' — '+DOW_FULL[d.getDay()]+' (changes every week this line comes round)';
+  const isRest = entry && entry.type==='rest';
+  document.querySelectorAll('#rotaKindSeg button').forEach(b=>{
+    b.className = (b.getAttribute('data-rk')==='rest') === isRest ? 'on' : '';
+  });
+  document.getElementById('rotaTimeFields').style.display = isRest ? 'none' : 'flex';
+  document.getElementById('rStart').value = (entry && entry.type==='shift') ? entry.start : '07:45';
+  document.getElementById('rEnd').value = (entry && entry.type==='shift') ? entry.end : '18:00';
+  document.getElementById('entryForm').style.display='none';
+  document.getElementById('rotaEditForm').style.display='block';
+});
+document.getElementById('cancelRotaBtn').addEventListener('click', ()=>{ document.getElementById('rotaEditForm').style.display='none'; });
+document.getElementById('rotaKindSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  document.querySelectorAll('#rotaKindSeg button').forEach(b=>b.className = b===btn ? 'on':'');
+  document.getElementById('rotaTimeFields').style.display = btn.getAttribute('data-rk')==='rest' ? 'none' : 'flex';
+});
+document.getElementById('saveRotaBtn').addEventListener('click', async ()=>{
+  if(!selectedDate) return;
+  const d = new Date(selectedDate+'T00:00:00');
+  const line = lineForWeek(startOfWeek(d));
+  const idx = d.getDay();
+  const restActive = document.querySelector('#rotaKindSeg button[data-rk="rest"]').className === 'on';
+  if(!patterns[line]) patterns[line] = [null,null,null,null,null,null,null];
+  if(restActive){
+    patterns[line][idx] = {type:'rest'};
+  } else {
+    const start = document.getElementById('rStart').value || '07:45';
+    const end = document.getElementById('rEnd').value || '18:00';
+    patterns[line][idx] = {type:'shift', start, end};
+  }
+  await savePatterns();
+  document.getElementById('rotaEditForm').style.display='none';
+  renderCalendar(); renderDayCard(); renderHero(); renderInsights();
+});
+
+let curKind='scheduled', curPay='hourly';
+document.getElementById('kindSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  curKind = btn.getAttribute('data-kind');
+  document.querySelectorAll('#kindSeg button').forEach(b=>b.className = b===btn ? (curKind==='extra'?'on kindextra':'on') : '');
+  document.getElementById('ratePresets').style.display = curKind==='extra' ? 'flex' : 'none';
+  if(curKind==='extra') document.getElementById('fRate').value = settings.weekdayRate;
+  else document.getElementById('fRate').value = settings.stdRate;
+});
+document.getElementById('paySeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  curPay = btn.getAttribute('data-pay');
+  document.querySelectorAll('#paySeg button').forEach(b=>b.className = b===btn ? 'on' : '');
+  document.getElementById('hourlyFields').style.display = curPay==='hourly' ? 'block' : 'none';
+  document.getElementById('flatFields').style.display = curPay==='flat' ? 'block' : 'none';
+});
+document.getElementById('ratePresets').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  const preset = btn.getAttribute('data-preset');
+  document.getElementById('fRate').value = preset==='weekday'?settings.weekdayRate:preset==='weekend'?settings.weekendRate:settings.nightRate;
+});
+document.getElementById('fStart').addEventListener('input', updateHoursPreview);
+document.getElementById('fEnd').addEventListener('input', updateHoursPreview);
+function updateHoursPreview(){
+  const s = document.getElementById('fStart').value, e = document.getElementById('fEnd').value;
+  if(s && e) document.getElementById('fHoursPreview').value = durLabel(durHours(s,e));
+}
+
+document.getElementById('saveEntryBtn').addEventListener('click', async ()=>{
+  if(!selectedDate) return;
+  const en = {
+    kind: curKind,
+    start: document.getElementById('fStart').value || '07:45',
+    end: document.getElementById('fEnd').value || '18:00',
+    payType: curPay,
+    rate: parseFloat(document.getElementById('fRate').value)||0,
+    flat: parseFloat(document.getElementById('fFlat').value)||0,
+    notes: document.getElementById('fNotes').value.trim()
+  };
+  if(!entries[selectedDate]) entries[selectedDate]=[];
+  entries[selectedDate].push(en);
+  await saveEntries();
+  document.getElementById('fNotes').value='';
+  document.getElementById('entryForm').style.display='none';
+  renderCalendar(); renderDayCard(); renderInsights();
+});
+
+document.getElementById('dayNote').addEventListener('change', async (e)=>{
+  if(!selectedDate) return;
+  const v = e.target.value.trim();
+  if(v) dayNotes[selectedDate] = v; else delete dayNotes[selectedDate];
+  await saveNotes();
+});
+
+document.getElementById('prevMonth').addEventListener('click', ()=>{ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()-1, 1); syncMonthNav(); });
+document.getElementById('nextMonth').addEventListener('click', ()=>{ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 1); syncMonthNav(); });
+document.getElementById('prevMonth2').addEventListener('click', ()=>{ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()-1, 1); syncMonthNav(); });
+document.getElementById('nextMonth2').addEventListener('click', ()=>{ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 1); syncMonthNav(); });
+function syncMonthNav(){ renderCalendar(); renderSummary(); }
+
+/* ---------- SUMMARY ---------- */
+function computeMonthTotals(y, m){
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  let schedHours=0, loggedHours=0, extraHours=0, totalPay=0;
+  const extraShifts = [];
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(y,m,day);
+    const key = fmtKey(d);
+    const {entry} = scheduledEntryFor(d);
+    if(entry && entry.type==='shift') schedHours += durHours(entry.start, entry.end);
+    (entries[key]||[]).forEach(en=>{
+      const hrs = durHours(en.start, en.end);
+      loggedHours += hrs;
+      if(en.kind==='extra'){ extraHours += hrs; extraShifts.push({key, en, hrs}); }
+      if(en.payType==='hourly') totalPay += hrs*en.rate;
+      else if(en.payType==='flat') totalPay += en.flat;
+    });
+  }
+  return {schedHours, loggedHours, extraHours, totalPay, extraShifts};
+}
+
+function renderSummary(){
+  const {schedHours, loggedHours, extraHours, totalPay, extraShifts} = computeMonthTotals(calMonth.getFullYear(), calMonth.getMonth());
+  document.getElementById('sumSchedHours').textContent = durLabel(schedHours);
+  document.getElementById('sumLoggedHours').textContent = durLabel(loggedHours);
+  document.getElementById('sumExtraHours').textContent = durLabel(extraHours);
+  document.getElementById('sumPay').textContent = '£'+totalPay.toFixed(2);
+
+  const list = document.getElementById('extraList');
+  const empty = document.getElementById('extraEmpty');
+  list.innerHTML = '';
+  if(extraShifts.length===0){ empty.style.display='block'; }
+  else{
+    empty.style.display='none';
+    extraShifts.sort((a,b)=>a.key.localeCompare(b.key)).forEach(({key,en,hrs})=>{
+      const d = new Date(key+'T00:00:00');
+      let pay = en.payType==='hourly' ? hrs*en.rate : en.payType==='flat' ? en.flat : 0;
+      const div = document.createElement('div');
+      div.className='entry';
+      div.innerHTML = '<div class="entry-top"><span class="entry-tag extra">'+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3)+'</span></div>'+
+        '<div class="entry-time">'+en.start+'–'+en.end+'</div>'+
+        '<div class="entry-meta"><span>'+durLabel(hrs)+'</span>'+(en.payType!=='none'?'<span class="entry-pay">£'+pay.toFixed(2)+'</span>':'<span>Unpaid</span>')+'</div>'+
+        (en.notes?'<div class="entry-notes">'+en.notes+'</div>':'');
+      list.appendChild(div);
+    });
+  }
+}
+
+document.getElementById('copySummaryBtn').addEventListener('click', async ()=>{
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  const t = computeMonthTotals(y, m);
+  let text = MONTHS[m]+' '+y+' — Duty Roster summary\n';
+  text += 'Scheduled (rota): '+durLabel(t.schedHours)+'\n';
+  text += 'Actually logged: '+durLabel(t.loggedHours)+'\n';
+  text += 'Extra/overtime: '+durLabel(t.extraHours)+'\n';
+  text += 'Total pay logged: £'+t.totalPay.toFixed(2)+'\n';
+  if(t.extraShifts.length){
+    text += '\nExtra shifts:\n';
+    t.extraShifts.sort((a,b)=>a.key.localeCompare(b.key)).forEach(({key,en,hrs})=>{
+      const pay = en.payType==='hourly'?hrs*en.rate:en.payType==='flat'?en.flat:0;
+      text += '- '+key+': '+en.start+'-'+en.end+' ('+durLabel(hrs)+') £'+pay.toFixed(2)+(en.notes?' — '+en.notes:'')+'\n';
+    });
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('copySummaryBtn');
+    const orig = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(()=>btn.textContent=orig, 1500);
+  }catch(e){ alert(text); }
+});
+
+/* ---------- INSIGHTS ---------- */
+function renderInsights(){
+  const now = new Date();
+  let daysToRest = null, streak = 0, foundRest=false;
+  for(let i=0;i<60;i++){
+    const d = addDays(now,i);
+    const {entry} = scheduledEntryFor(d);
+    if(entry && entry.type==='rest'){ if(daysToRest===null) daysToRest = i; if(!foundRest){} }
+    if(!foundRest){
+      if(entry && entry.type==='shift') streak++;
+      else if(entry && entry.type==='rest'){ foundRest = true; }
+    }
+    if(daysToRest!==null) break;
+  }
+  document.getElementById('insRest').textContent = daysToRest===null ? '—' : (daysToRest===0 ? 'Today' : daysToRest);
+  document.getElementById('insStreak').textContent = streak + (streak===1?' day':' days');
+
+  const t = computeMonthTotals(now.getFullYear(), now.getMonth());
+  document.getElementById('insMonthHrs').textContent = durLabel(t.loggedHours);
+}
+
+/* ---------- HERO ---------- */
+function renderHero(){
+  const now = new Date();
+  const todayKey = fmtKey(now);
+  const nowMins = now.getHours()*60+now.getMinutes();
+  let found = null;
+  for(let i=0;i<70;i++){
+    const d = addDays(now,i);
+    const {entry} = scheduledEntryFor(d);
+    if(!entry) continue;
+    if(i===0 && entry.type==='shift' && toMinutes(entry.end)<nowMins) continue;
+    found = {d, entry}; break;
+  }
+  const heroTime=document.getElementById('heroTime'), heroSub=document.getElementById('heroSub'),
+        heroDay=document.getElementById('heroDay'), heroDate=document.getElementById('heroDate');
+  if(!found){ heroTime.textContent='—'; heroTime.className='hero-time unset'; heroSub.textContent='No shift logged ahead'; heroDay.textContent='—'; heroDate.textContent='—'; return; }
+  const isToday = fmtKey(found.d)===todayKey;
+  heroDay.textContent = isToday?'Today':DOW_FULL[found.d.getDay()];
+  heroDate.textContent = found.d.getDate()+' '+MONTHS[found.d.getMonth()].slice(0,3);
+  if(found.entry.type==='rest'){ heroTime.textContent='REST'; heroTime.className='hero-time rest'; heroSub.textContent=isToday?'No shift today':'Next logged day is a rest day'; }
+  else{ heroTime.textContent=found.entry.start+'–'+found.entry.end+(isNight(found.entry)?' 🌙':''); heroTime.className='hero-time'; heroSub.textContent=durLabel(durHours(found.entry.start,found.entry.end))+' shift'; }
+}
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'  '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* ---------- TABS & SETTINGS ---------- */
+document.getElementById('tabCal').addEventListener('click', ()=>{
+  document.getElementById('tabCal').className='active'; document.getElementById('tabSum').className='';
+  document.getElementById('viewCal').style.display='block'; document.getElementById('viewSum').style.display='none';
+});
+document.getElementById('tabSum').addEventListener('click', ()=>{
+  document.getElementById('tabSum').className='active'; document.getElementById('tabCal').className='';
+  document.getElementById('viewSum').style.display='block'; document.getElementById('viewCal').style.display='none';
+  renderSummary();
+});
+document.getElementById('settingsToggle').addEventListener('click', ()=>{
+  const p = document.getElementById('settingsPanel');
+  p.classList.toggle('open');
+  document.getElementById('settingsToggle').textContent = p.classList.contains('open') ? 'Default pay rates ▴' : 'Default pay rates ▾';
+});
+document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
+  settings.stdRate = parseFloat(document.getElementById('setStdRate').value)||0;
+  settings.weekdayRate = parseFloat(document.getElementById('setWeekdayRate').value)||0;
+  settings.weekendRate = parseFloat(document.getElementById('setWeekendRate').value)||0;
+  settings.nightRate = parseFloat(document.getElementById('setNightRate').value)||0;
+  await saveSettings();
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline-first still works without it */ });
+  });
+}
+
+(async function init(){
+  await loadAll();
+  document.getElementById('setStdRate').value = settings.stdRate;
+  document.getElementById('setWeekdayRate').value = settings.weekdayRate;
+  document.getElementById('setWeekendRate').value = settings.weekendRate;
+  document.getElementById('setNightRate').value = settings.nightRate;
+  const today = new Date();
+  calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  selectedDate = fmtKey(today);
+  renderCalendar();
+  renderDayCard();
+  renderHero();
+  renderInsights();
+  tickClock();
+  setInterval(tickClock, 30000);
+})();
+</script>
+</body>
+</html>
